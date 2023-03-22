@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"homo/client/balancer"
+	"homo/client/installer"
 	"net"
+	"runtime"
 )
 
 // config
@@ -20,6 +22,9 @@ type BalancerStats struct {
 }
 
 func main() {
+	if runtime.GOOS == "windows" {
+		installer.InstallerWin()
+	}
 CONNECT:
 	connection, err := net.Dial("tcp", TARGET_SERVER+":"+TARGET_PORT)
 

